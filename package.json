@@ -1,0 +1,16 @@
+{
+  "name": "price-list-management",
+  "version": "1.0.0",
+  "description": "Price List Management System - Full Stack",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "pm2 start ecosystem.config.js --env production",
+    "stop": "pm2 stop ecosystem.config.js",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "dependencies": {
+    "pm2": "^5.3.0"
+  }
+}
