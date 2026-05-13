@@ -81,12 +81,17 @@ const Navbar = ({ onMenuClick }) => {
           </button>
 
           <Link to={getDashboardLink()} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PL</span>
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white flex items-center justify-center p-0.5 shadow-sm">
+              <img src="/logo.png" alt="DCC Infotech" className="w-full h-full object-contain" />
             </div>
-            <span className="font-semibold text-gray-900 dark:text-white hidden sm:block">
-              Price List
-            </span>
+            <div className="hidden sm:flex flex-col leading-tight">
+              <span className="font-bold text-gray-900 dark:text-white text-sm tracking-tight">
+                Price List
+              </span>
+              <span className="text-xs text-indigo-500 dark:text-indigo-400 font-medium tracking-wide">
+                DCC Infotech Pvt. Ltd.
+              </span>
+            </div>
           </Link>
         </div>
 

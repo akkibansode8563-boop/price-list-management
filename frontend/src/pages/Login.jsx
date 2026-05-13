@@ -40,13 +40,18 @@ const Login = () => {
       <div className="w-full max-w-md z-10 px-4">
         {/* Logo */}
         <div className="text-center mb-10 animate-slide-down">
-          <div className="w-16 h-16 bg-gradient-to-tr from-primary-600 to-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow">
-            <span className="text-white font-display font-bold text-2xl tracking-tighter">PL</span>
+          <div className="flex flex-col items-center gap-4 mb-4">
+            <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-glow bg-white flex items-center justify-center p-1">
+              <img src="/logo.png" alt="DCC Infotech Logo" className="w-full h-full object-contain" />
+            </div>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">
+          <h1 className="text-3xl font-display font-bold text-white mb-1 tracking-tight">
             Price List
           </h1>
-          <p className="text-slate-400 font-medium">
+          <p className="text-sm font-semibold text-indigo-300 tracking-widest uppercase">
+            DCC Infotech Pvt. Ltd.
+          </p>
+          <p className="text-slate-400 font-medium text-sm mt-1">
             Sign in to manage your portfolio
           </p>
         </div>
