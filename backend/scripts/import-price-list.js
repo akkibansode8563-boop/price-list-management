@@ -57,13 +57,21 @@ async function importPriceList() {
   console.log('  PRICE LIST IMPORTER');
   console.log('═══════════════════════════════════════════\n');
 
-  const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME || 'pricelist_db',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'Admin@123',
-  });
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  const poolConfig = connectionString 
+    ? { 
+        connectionString,
+        ssl: { rejectUnauthorized: false }
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME || 'pricelist_db',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'Admin@123',
+      };
+
+  const pool = new Pool(poolConfig);
 
   try {
     // ── Step 1: Read Excel
@@ -107,18 +115,13 @@ async function importPriceList() {
     const groups = [...new Set(rawData.map(r => (r['Product Group'] || 'UNCATEGORIZED').trim()))];
     const categoryIdMap = {}; // groupName → DB category id
 
-    for (const group of groups) {
-      const existing = await pool.query(`SELECT id FROM categories WHERE UPPER(name) = UPPER($1)`, [group]);
-      if (existing.rows.length > 0) {
-        categoryIdMap[group] = existing.rows[0].id;
-      } else {
-        const result = await pool.query(
-          `INSERT INTO categories (name, created_by) VALUES ($1, $2) RETURNING id`,
-          [group, adminId]
-        );
-        categoryIdMap[group] = result.rows[0].id;
-      }
-    }
+    await Promise.all(groups.map(async group => {
+      const result = await pool.query(
+        `INSERT INTO categories (name, created_by) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`,
+        [group, adminId]
+      );
+      categoryIdMap[group] = result.rows[0].id;
+    }));
     console.log(`   ✅ ${groups.length} categories ready\n`);
 
     // ── Step 5: Create all brands
@@ -127,15 +130,13 @@ async function importPriceList() {
     rawData.forEach(r => allBrands.add(extractBrand(r['Product Group'] || '', r['Item Description'] || '')));
     const brandIdMap = {};
 
-    for (const brand of allBrands) {
-      const existing = await pool.query(`SELECT id FROM brands WHERE UPPER(name) = UPPER($1)`, [brand]);
-      if (existing.rows.length > 0) {
-        brandIdMap[brand] = existing.rows[0].id;
-      } else {
-        const result = await pool.query(`INSERT INTO brands (name) VALUES ($1) RETURNING id`, [brand]);
-        brandIdMap[brand] = result.rows[0].id;
-      }
-    }
+    await Promise.all(Array.from(allBrands).map(async brand => {
+      const result = await pool.query(
+        `INSERT INTO brands (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`, 
+        [brand]
+      );
+      brandIdMap[brand] = result.rows[0].id;
+    }));
     console.log(`   ✅ ${allBrands.size} brands ready\n`);
 
     // ── Step 6: Import products in batches
@@ -143,81 +144,65 @@ async function importPriceList() {
     const stats = { inserted: 0, updated: 0, skipped: 0, errors: [] };
     const startTime = Date.now();
 
-    // Process in batches
+    // Process in chunks concurrently using pool
     for (let i = 0; i < rawData.length; i += BATCH_SIZE) {
       const batch = rawData.slice(i, i + BATCH_SIZE);
-      const client = await pool.connect();
 
-      try {
-        await client.query('BEGIN');
+      await Promise.all(batch.map(async row => {
+        try {
+          const productId = (row['Item Code '] || '').toString().trim();
+          const name      = (row['Item Description'] || '').toString().trim();
+          const group     = (row['Product Group'] || 'UNCATEGORIZED').toString().trim();
+          const nlc       = parseFloat(row['NLC']) || 0;
+          const mop       = parseFloat(row['MOP']) || 0;
+          const pmCode    = (row['ProductManager Code'] || '').toString().trim();
 
-        for (const row of batch) {
-          try {
-            const productId = (row['Item Code '] || '').toString().trim();
-            const name      = (row['Item Description'] || '').toString().trim();
-            const group     = (row['Product Group'] || 'UNCATEGORIZED').toString().trim();
-            const nlc       = parseFloat(row['NLC']) || 0;
-            const mop       = parseFloat(row['MOP']) || 0;
-            const pmCode    = (row['ProductManager Code'] || '').toString().trim();
-
-            if (!productId || !name) {
-              stats.skipped++;
-              continue;
-            }
-
-            const categoryId = categoryIdMap[group];
-            const brand = extractBrand(group, name);
-            const brandId = brandIdMap[brand];
-
-            // dealer_price = NLC, mrp = MOP (if MOP > NLC, else MOP = NLC * 1.15)
-            const dealerPrice = nlc;
-            const mrp = mop > 0 ? mop : (nlc > 0 ? Math.round(nlc * 1.15) : 0);
-            const specialPrice = nlc > 0 ? Math.round(nlc * 0.98) : 0; // 2% discount
-
-            const stockStatus = nlc > 0 ? 'In Stock' : 'Out of Stock';
-            const pmId = pmIdMap[pmCode] || adminId;
-            const remarks = pmCode || null;
-
-            // Upsert by product_id
-            const existing = await client.query(
-              `SELECT id FROM products WHERE product_id = $1`, [productId]
-            );
-
-            if (existing.rows.length > 0) {
-              await client.query(`
-                UPDATE products SET
-                  name = $1, brand_id = $2, category_id = $3,
-                  dealer_price = $4, mrp = $5, special_price = $6,
-                  stock_status = $7, remarks = $8, updated_by = $9
-                WHERE product_id = $10
-              `, [name, brandId, categoryId, dealerPrice, mrp, specialPrice,
-                  stockStatus, remarks, pmId, productId]);
-              stats.updated++;
-            } else {
-              await client.query(`
-                INSERT INTO products (
-                  product_id, name, brand_id, category_id,
-                  dealer_price, mrp, special_price,
-                  stock_status, available_quantity,
-                  gst_percent, remarks, updated_by
-                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-              `, [productId, name, brandId, categoryId,
-                  dealerPrice, mrp, specialPrice,
-                  stockStatus, 0, 18.00, remarks, pmId]);
-              stats.inserted++;
-            }
-          } catch (rowErr) {
-            stats.errors.push({ code: row['Item Code '], error: rowErr.message });
+          if (!productId || !name) {
+            stats.skipped++;
+            return;
           }
-        }
 
-        await client.query('COMMIT');
-      } catch (batchErr) {
-        await client.query('ROLLBACK');
-        console.error('Batch error:', batchErr.message);
-      } finally {
-        client.release();
-      }
+          const categoryId = categoryIdMap[group];
+          const brand = extractBrand(group, name);
+          const brandId = brandIdMap[brand];
+
+          const dealerPrice = nlc;
+          const mrp = mop > 0 ? mop : (nlc > 0 ? Math.round(nlc * 1.15) : 0);
+          const specialPrice = nlc > 0 ? Math.round(nlc * 0.98) : 0; 
+          const stockStatus = nlc > 0 ? 'In Stock' : 'Out of Stock';
+          const pmId = pmIdMap[pmCode] || adminId;
+          const remarks = pmCode || null;
+
+          const existing = await pool.query(`SELECT id FROM products WHERE product_id = $1`, [productId]);
+
+          if (existing.rows.length > 0) {
+            await pool.query(`
+              UPDATE products SET
+                name = $1, brand_id = $2, category_id = $3,
+                dealer_price = $4, mrp = $5, special_price = $6,
+                stock_status = $7, remarks = $8, updated_by = $9,
+                is_active = true
+              WHERE product_id = $10
+            `, [name, brandId, categoryId, dealerPrice, mrp, specialPrice,
+                stockStatus, remarks, pmId, productId]);
+            stats.updated++;
+          } else {
+            await pool.query(`
+              INSERT INTO products (
+                product_id, name, brand_id, category_id,
+                dealer_price, mrp, special_price,
+                stock_status, available_quantity,
+                gst_percent, remarks, updated_by
+              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            `, [productId, name, brandId, categoryId,
+                dealerPrice, mrp, specialPrice,
+                stockStatus, 0, 18.00, remarks, pmId]);
+            stats.inserted++;
+          }
+        } catch (rowErr) {
+          stats.errors.push({ code: row['Item Code '], error: rowErr.message });
+        }
+      }));
 
       // Progress
       const done = Math.min(i + BATCH_SIZE, rawData.length);
