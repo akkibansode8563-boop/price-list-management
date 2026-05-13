@@ -145,21 +145,27 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Serve frontend in production
-if (process.env.NODE_ENV === 'production') {
+// Serve frontend in production (Skip on Vercel as Vercel serves static files)
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
   
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
   });
 } else {
-  // 404 handler for API routes in development
+  // 404 handler for API routes
   app.use((req, res) => {
     res.status(404).json({ message: 'Route not found.' });
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Start listener only if not on Vercel
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+// Export for Vercel Serverless
+module.exports = app;
