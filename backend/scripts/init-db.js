@@ -11,42 +11,54 @@ const path = require('path');
 async function initDatabase() {
   console.log('🚀 Starting database initialization...\n');
 
-  // First connect to postgres to create the database
-  const pgPool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    database: 'postgres',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'Admin@123',
-  });
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
-  try {
-    // Create database if it doesn't exist
-    const dbName = process.env.DB_NAME || 'pricelist_db';
-    const checkDb = await pgPool.query(
-      `SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]
-    );
-    
-    if (checkDb.rows.length === 0) {
-      await pgPool.query(`CREATE DATABASE ${dbName}`);
-      console.log(`✅ Database "${dbName}" created.`);
-    } else {
-      console.log(`ℹ️  Database "${dbName}" already exists.`);
+  // Only attempt to create database if running locally (no connection string)
+  if (!connectionString) {
+    const pgPool = new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT) || 5432,
+      database: 'postgres',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'Admin@123',
+    });
+
+    try {
+      // Create database if it doesn't exist
+      const dbName = process.env.DB_NAME || 'pricelist_db';
+      const checkDb = await pgPool.query(
+        `SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]
+      );
+      
+      if (checkDb.rows.length === 0) {
+        await pgPool.query(`CREATE DATABASE ${dbName}`);
+        console.log(`✅ Database "${dbName}" created.`);
+      } else {
+        console.log(`ℹ️  Database "${dbName}" already exists.`);
+      }
+    } catch (err) {
+      console.error('❌ Error creating database:', err.message);
+    } finally {
+      await pgPool.end();
     }
-  } catch (err) {
-    console.error('❌ Error creating database:', err.message);
-  } finally {
-    await pgPool.end();
   }
 
   // Now connect to the target database
-  const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME || 'pricelist_db',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'Admin@123',
-  });
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  const poolConfig = connectionString 
+    ? { 
+        connectionString,
+        ssl: { rejectUnauthorized: false }
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME || 'pricelist_db',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'Admin@123',
+      };
+
+  const pool = new Pool(poolConfig);
 
   try {
     // Enable UUID extension
