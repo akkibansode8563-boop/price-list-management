@@ -7,22 +7,22 @@ import {
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, delay }) => (
-  <div className={`glass-panel p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl animate-slide-up`} style={{ animationDelay: delay }}>
+  <div className={`glass-panel p-4 sm:p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl animate-slide-up`} style={{ animationDelay: delay }}>
     <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-semibold text-slate-500 tracking-wide uppercase">{title}</p>
-        <p className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-2 tracking-tight">{value}</p>
+      <div className="flex-1 min-w-0 mr-2">
+        <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase truncate">{title}</p>
+        <p className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white mt-1 sm:mt-2 tracking-tight">{value}</p>
         {trend && (
-          <div className={`flex items-center gap-1 mt-3 text-sm font-medium ${
+          <div className={`flex items-center gap-1 mt-2 sm:mt-3 text-xs sm:text-sm font-medium ${
             trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-danger-600 dark:text-danger-400'
           }`}>
-            {trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+            {trend === 'up' ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4" />}
             <span>{trendValue}</span>
           </div>
         )}
       </div>
-      <div className={`p-3.5 rounded-2xl bg-gradient-to-br ${color} shadow-lg`}>
-        <Icon className="w-6 h-6 text-white" />
+      <div className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-br ${color} shadow-lg flex-shrink-0`}>
+        <Icon className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
       </div>
     </div>
   </div>
@@ -60,12 +60,12 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="animate-fade-in">
-        <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Admin Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Overview of your price list system</p>
+        <h1 className="text-xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Admin Dashboard</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm sm:text-base font-medium">Overview of your price list system</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatCard
           title="Total Products"
           value={stats?.totalProducts?.toLocaleString() || 0}

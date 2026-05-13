@@ -37,12 +37,12 @@ const SalesDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="animate-fade-in">
-        <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Sales Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Quick access to latest pricing</p>
+        <h1 className="text-xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Sales Dashboard</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm sm:text-base font-medium">Quick access to latest pricing</p>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <button
           onClick={() => navigate('/products')}
           className="glass-panel p-6 text-left hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group rounded-2xl animate-slide-up"

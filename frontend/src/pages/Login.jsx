@@ -30,14 +30,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-900">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-900 px-4 py-8">
       {/* Premium Background Elements */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-600/30 blur-[120px] rounded-full animate-pulse-slow"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 blur-[120px] rounded-full animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      <div className="w-full max-w-md z-10 px-4">
+      <div className="w-full max-w-md z-10">
         {/* Logo */}
         <div className="text-center mb-10 animate-slide-down">
           <div className="flex flex-col items-center gap-4 mb-4">

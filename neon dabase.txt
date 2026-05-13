@@ -1,0 +1,8 @@
+# Recommended for most uses
+DATABASE_URL=postgresql://neondb_owner:npg_ak5Es1LrZvXR@ep-green-base-apxezcc7-pooler.c-7.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require
+
+# For uses requiring a connection without pgbouncer
+DATABASE_URL_UNPOOLED=postgresql://neondb_owner:npg_ak5Es1LrZvXR@ep-green-base-apxezcc7.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# Parameters for constructing your own connection string
+PGHOST=ep-green-base-apxezcc7-pooler.c-7.us-east-1.aws.neon.tech
