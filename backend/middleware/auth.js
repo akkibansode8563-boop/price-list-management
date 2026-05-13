@@ -9,7 +9,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_2026');
 
     const result = await pool.query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, u.is_active, r.name as role
